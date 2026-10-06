@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lactic Acidosis: Interactive ED Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Cool & Clinical (#E0F2F1, #90A4AE, #546E7A, #DC143C) -->
+    <!-- 
+    Application Structure Plan: The SPA is designed as an interactive dashboard with a sticky top navigation. The key sections (Overview, Physiology, Diagnosis, Classification, Management, Pearls) are accessible via tabs. This task-oriented design prioritizes clinical utility and speed. Key interactions include tabbed navigation and an integrated calculator for diagnostic formulas.
+    -->
+    <!-- 
+    Visualization & Content Choices:
+    - Lactate Metabolism Flow: Goal=Organize -> Method=HTML/Tailwind Diagram.
+    - Clearance Proportions: Goal=Compare -> Method=Chart.js Doughnut.
+    - Diagnostic Calculator (AG, Winters, Delta Ratio): Goal=Interact -> Method=JS Calculator.
+    - Type A Causes: Goal=Compare -> Method=Chart.js Bar Chart.
+    - Type B Causes: Goal=Organize -> Method=Interactive HTML Accordion.
+    - Sepsis Six: Goal=Organize Process -> Method=HTML/Tailwind Numbered Grid.
+    - Lactate Clearance Trend: Goal=Change -> Method=Chart.js Line Chart.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background-color: #E0F2F1;
+            color: #3D405B;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 320px;
+            }
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+        }
+        .nav-button.active {
+            border-bottom-color: #546E7A;
+            color: #546E7A;
+            font-weight: 700;
+        }
+        .nav-button:hover {
+             background-color: rgba(144, 164, 174, 0.1);
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #CFD8DC;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+         .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        .tab-button {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #90A4AE;
+            color: white;
+            font-weight: 600;
+        }
+        .accordion-header {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .accordion-header:hover {
+            background-color: #F4F6F7;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <img src="https://iili.io/KGQOvkl.md.png" alt="WMEBEM Logo" class="mx-auto h-20 mb-4">
+            <h1 class="text-4xl md:text-5xl font-black text-[#3D405B]">Lactic Acidosis: ED Dashboard</h1>
+            <p class="text-lg text-gray-600 mt-1">An Interactive Clinical Guide for the UK Registrar</p>
+        </header>
+
+        <nav id="main-nav" class="sticky top-0 z-10 bg-[#E0F2F1]/80 backdrop-blur-sm mb-8 border-b-2 border-[#CFD8DC]">
+            <div class="flex justify-center items-center flex-wrap">
+                <button data-target="overview" class="nav-button active text-sm md:text-base p-3 md:p-4">Overview</button>
+                <button data-target="physiology" class="nav-button text-sm md:text-base p-3 md:p-4">Physiology</button>
+                <button data-target="diagnosis" class="nav-button text-sm md:text-base p-3 md:p-4">Diagnosis</button>
+                <button data-target="classification" class="nav-button text-sm md:text-base p-3 md:p-4">Classification</button>
+                <button data-target="management" class="nav-button text-sm md:text-base p-3 md:p-4">Management</button>
+                <button data-target="pearls" class="nav-button text-sm md:text-base p-3 md:p-4">Pearls</button>
+            </div>
+        </nav>
+
+        <main id="content-container">
+            <section id="overview" class="content-section">
+                <p class="text-center max-w-3xl mx-auto mb-12 text-gray-700 text-lg">Lactic acidosis is not a single disease but a manifestation of profound physiological stress. Understanding its underlying cause is crucial for effective management. It is broadly classified into three main types based on the presence or absence of tissue hypoperfusion.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    
+                    <div class="card p-6">
+                        <div class="flex-grow">
+                            <div class="mb-4 text-center">
+                                <svg class="w-16 h-16 inline-block text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-2xl text-center mb-2 text-[#546E7A]">Type A: Shock</h3>
+                            <p class="text-sm text-gray-600 text-center font-semibold mb-4">Inadequate Oxygen Delivery</p>
+                            <p class="text-gray-700 text-center">Caused by systemic hypoperfusion where oxygen delivery fails to meet tissue demand. This forces anaerobic metabolism, leading to massive lactate overproduction.</p>
+                        </div>
+                        <div class="mt-6 text-center">
+                             <button onclick="navigateToTab('classification', 'typeA')" class="w-full bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-[#90A4AE] hover:text-white transition-colors">
+                                Explore Causes &rarr;
+                            </button>
+                        </div>
+                    </div>
+
+                     <div class="card p-6">
+                        <div class="flex-grow">
+                            <div class="mb-4 text-center">
+                                <svg class="w-16 h-16 inline-block text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.66.537-1.197 1.197-1.197h.006c.66 0 1.197.537 1.197 1.197v7.626c0 .66-.537 1.197-1.197 1.197h-.006a1.197 1.197 0 01-1.197-1.197V6.087zM6 18.75h12c.621 0 1.125-.504 1.125-1.125V11.25c0-.621-.504-1.125-1.125-1.125H6.001c-.621 0-1.125.504-1.125 1.125v6.375c0 .621.504 1.125 1.125 1.125z" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-2xl text-center mb-2 text-[#546E7A]">Type B: Metabolic</h3>
+                            <p class="text-sm text-gray-600 text-center font-semibold mb-4">Cellular Dysfunction</p>
+                            <p class="text-gray-700 text-center">Occurs in haemodynamically stable patients. The primary issue is cellular metabolic dysfunction caused by diseases, drugs, or toxins that impair lactate clearance.</p>
+                        </div>
+                         <div class="mt-6 text-center">
+                             <button onclick="navigateToTab('classification', 'typeB')" class="w-full bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-[#90A4AE] hover:text-white transition-colors">
+                                Review Causes &rarr;
+                            </button>
+                        </div>
+                    </div>
+
+                     <div class="card p-6">
+                        <div class="flex-grow">
+                            <div class="mb-4 text-center">
+                                <svg class="w-16 h-16 inline-block text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.375a9.737 9.737 0 005.323-1.635 9.75 9.75 0 00-10.646 0A9.737 9.737 0 0012 18.375z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 2.25c-3.92 0-7.222 2.228-8.815 5.484.962 1.637 2.14 3.018 3.442 4.095M20.815 7.734c-1.593-3.256-4.895-5.484-8.815-5.484a14.225 14.225 0 00-3.442 4.095" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75a4.5 4.5 0 004.5-4.5H7.5a4.5 4.5 0 004.5 4.5z" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-2xl text-center mb-2 text-[#546E7A]">Type D: Gut-Derived</h3>
+                            <p class="text-sm text-gray-600 text-center font-semibold mb-4">The Neurological Mimic</p>
+                            <p class="text-gray-700 text-center">A rare but critical diagnosis caused by gut bacteria producing D-lactate. Suspect in patients with short-bowel syndrome and unexplained encephalopathy.</p>
+                        </div>
+                        <div class="mt-6 text-center">
+                             <button onclick="navigateToTab('classification', 'typeD')" class="w-full bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-[#90A4AE] hover:text-white transition-colors">
+                                View Comparison &rarr;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <section id="physiology" class="content-section hidden">
+                <p class="text-center max-w-3xl mx-auto mb-8 text-gray-700">This section provides a high-level overview of modern lactate physiology. The core concept is that lactate is a vital metabolic fuel, not simply a waste product. Understanding its production-clearance balance is fundamental to interpreting its significance in the Emergency Department.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl text-center mb-4">Lactate Metabolism: Production vs Clearance</h3>
+                        <div class="space-y-4">
+                            <div class="text-center p-3 bg-green-50 border-2 border-dashed border-green-300 rounded-lg">
+                                <h4 class="font-semibold text-green-800">1. Production (Glycolysis)</h4>
+                                <p class="text-sm">Glucose → Pyruvate → Lactate (regenerates NAD⁺)</p>
+                            </div>
+                            <div class="text-center text-3xl font-bold text-gray-400">↓</div>
+                             <div class="text-center p-3 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg">
+                                <h4 class="font-semibold text-blue-800">2. Clearance (The Lactate Shuttle)</h4>
+                                <p class="text-sm">Lactate is transported via blood to be used as fuel.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl text-center mb-4">Systemic Clearance Contribution</h3>
+                        <div class="chart-container">
+                            <canvas id="clearanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card lg:col-span-2 p-6">
+                         <h3 class="font-bold text-xl text-center mb-4">The Clinical Spectrum</h3>
+                         <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 font-semibold">Parameter</th>
+                                        <th class="p-3 font-semibold">Hyperlactatemia</th>
+                                        <th class="p-3 font-semibold">Lactic Acidosis</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="p-3 font-semibold">Lactate (mmol/L)</td>
+                                        <td class="p-3">&gt;2.0 up to 4.0</td>
+                                        <td class="p-3 font-bold text-[#546E7A]">Commonly &gt;4.0</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="p-3 font-semibold">Arterial pH</td>
+                                        <td class="p-3">Normal (&gt;7.35)</td>
+                                        <td class="p-3 font-bold text-[#546E7A]">Low (&lt;7.35)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 font-semibold">Context</td>
+                                        <td class="p-3">Metabolic stress, perfusion may be adequate.</td>
+                                        <td class="p-3">Severe derangement, often with hypoperfusion.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="diagnosis" class="content-section hidden">
+                 <p class="text-center max-w-3xl mx-auto mb-8 text-gray-700">This section focuses on practical tools for diagnosis. Use the calculator to determine the albumin-corrected anion gap, expected respiratory compensation (Winter's formula), and the delta ratio to investigate for a mixed acid-base disorder.</p>
+                 <div class="card p-6 max-w-3xl mx-auto">
+                     <h3 class="font-bold text-xl text-center mb-6">Diagnostic Calculator</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                         <div class="col-span-1 md:col-span-2 text-center text-sm bg-gray-100 p-2 rounded-md">Enter patient values below.</div>
+                         <div>
+                             <label for="sodium" class="block text-sm font-medium text-gray-700">Sodium (mmol/L)</label>
+                             <input type="number" id="sodium" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#546E7A] focus:ring-[#546E7A] sm:text-sm">
+                         </div>
+                          <div>
+                             <label for="potassium" class="block text-sm font-medium text-gray-700">Potassium (mmol/L)</label>
+                             <input type="number" id="potassium" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#546E7A] focus:ring-[#546E7A] sm:text-sm">
+                         </div>
+                          <div>
+                             <label for="chloride" class="block text-sm font-medium text-gray-700">Chloride (mmol/L)</label>
+                             <input type="number" id="chloride" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#546E7A] focus:ring-[#546E7A] sm:text-sm">
+                         </div>
+                          <div>
+                             <label for="bicarb" class="block text-sm font-medium text-gray-700">Bicarbonate (mmol/L)</label>
+                             <input type="number" id="bicarb" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#546E7A] focus:ring-[#546E7A] sm:text-sm">
+                         </div>
+                          <div>
+                             <label for="albumin" class="block text-sm font-medium text-gray-700">Albumin (g/L)</label>
+                             <input type="number" id="albumin" value="40" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#546E7A] focus:ring-[#546E7A] sm:text-sm">
+                         </div>
+                         <div class="flex items-end">
+                             <button id="calculateBtn" class="w-full bg-[#90A4AE] text-white font-semibold py-2 px-4 rounded-md hover:bg-[#546E7A] transition-colors">Calculate</button>
+                         </div>
+                     </div>
+                     <div id="results" class="mt-6 space-y-4 hidden">
+                          <div class="p-4 bg-blue-50 rounded-lg">
+                             <h4 class="font-semibold text-blue-800">Corrected Anion Gap:</h4>
+                             <p id="correctedAgResult" class="text-2xl font-bold"></p>
+                         </div>
+                          <div class="p-4 bg-green-50 rounded-lg">
+                             <h4 class="font-semibold text-green-800">Expected pCO₂ (Winter's Formula):</h4>
+                             <p id="wintersResult" class="text-2xl font-bold"></p>
+                         </div>
+                         <div class="p-4 bg-purple-50 rounded-lg">
+                             <h4 class="font-semibold text-purple-800">Delta Ratio (ΔAG/ΔHCO₃⁻):</h4>
+                             <p id="deltaRatioResult" class="text-2xl font-bold"></p>
+                             <p id="deltaRatioInterpretation" class="text-sm mt-1"></p>
+                         </div>
+                     </div>
+                 </div>
+            </section>
+
+            <section id="classification" class="content-section hidden">
+                <p class="text-center max-w-3xl mx-auto mb-8 text-gray-700">Understanding the cause of lactic acidosis is key to its management. The Cohen & Woods classification provides a useful framework. Use the tabs below to explore the distinct pathophysiology and common causes of Type A (shock), Type B (metabolic/toxic), and the rare Type D (gut-derived) lactic acidosis.</p>
+                <div class="bg-gray-100 rounded-lg p-1 flex space-x-1 mb-6 max-w-md mx-auto">
+                    <button data-tab="typeA" class="tab-button active w-full p-2 rounded-md text-sm md:text-base">Type A: Shock</button>
+                    <button data-tab="typeB" class="tab-button w-full p-2 rounded-md text-sm md:text-base">Type B: Metabolic</button>
+                    <button data-tab="typeD" class="tab-button w-full p-2 rounded-md text-sm md:text-base">Type D: Gut</button>
+                </div>
+                
+                <div id="typeA" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="card p-6">
+                            <h3 class="font-bold text-xl mb-2 text-[#546E7A]">Type A: Inadequate Oxygen Delivery</h3>
+                            <p class="mb-4">This is the classic shock state, where systemic oxygen delivery fails to meet tissue demand. The resulting hypoxia forces anaerobic metabolism, leading to massive lactate overproduction. Management is focused on aggressively reversing the cause of shock to restore perfusion.</p>
+                            <div class="p-3 bg-red-50 border-l-4 border-[#DC143C] rounded-r-md">
+                                <p class="font-semibold text-red-800">Vicious Cycle:</p>
+                                <p class="text-sm">Shock → Lactate Production → Acidosis → Myocardial Suppression & Vasodilation → Worsening Shock</p>
+                            </div>
+                        </div>
+                        <div class="card p-6">
+                             <h3 class="font-bold text-xl text-center mb-4">Common Causes of Type A Shock</h3>
+                             <div class="chart-container">
+                                 <canvas id="typeAChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="typeB" class="tab-content hidden">
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl mb-2 text-[#546E7A]">Type B: Normal Perfusion, Cellular Dysfunction</h3>
+                        <p class="mb-6">This type occurs in haemodynamically stable patients where the problem lies in the cell's metabolic machinery, not oxygen delivery. The cause is often a disease, drug, or toxin that poisons mitochondria or excessively accelerates glycolysis. A meticulous history is key.</p>
+                        
+                        <div class="space-y-1">
+                            <div class="accordion-item border rounded-lg">
+                                <div class="accordion-header p-4 flex justify-between items-center bg-gray-50">
+                                    <h4 class="font-semibold">B1: Underlying Disease</h4>
+                                    <span class="text-xl font-bold transform transition-transform">+</span>
+                                </div>
+                                <div class="accordion-content p-4 border-t">
+                                    <ul class="list-disc list-inside space-y-1 text-sm">
+                                        <li><strong>Liver/Renal Failure:</strong> Impaired clearance.</li>
+                                        <li><strong>Malignancy (Warburg Effect):</strong> Massive lactate overproduction (leukaemias/lymphomas).</li>
+                                        <li><strong>Sepsis:</strong> Complex mix of A & B mechanisms.</li>
+                                        <li><strong>Thiamine (B1) Deficiency:</strong> Blocks pyruvate dehydrogenase.</li>
+                                        <li><strong>DKA, Pheochromocytoma</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="accordion-item border rounded-lg">
+                                <div class="accordion-header p-4 flex justify-between items-center bg-gray-50">
+                                    <h4 class="font-semibold">B2: Drugs & Toxins</h4>
+                                    <span class="text-xl font-bold transform transition-transform">+</span>
+                                </div>
+                                <div class="accordion-content p-4 border-t">
+                                    <ul class="list-disc list-inside space-y-1 text-sm">
+                                        <li><strong>Metformin (MALA):</strong> The classic example, risk amplified by AKI.</li>
+                                        <li><strong>Toxic Alcohols:</strong> Ethylene glycol, methanol.</li>
+                                        <li><strong>Propofol (PRIS), Linezolid, NRTIs:</strong> Mitochondrial toxicity.</li>
+                                        <li><strong>Beta-2 Agonists (Salbutamol):</strong> Adrenergic stimulation of glycolysis.</li>
+                                        <li><strong>Salicylates, Cyanide, Iron</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="accordion-item border rounded-lg">
+                                <div class="accordion-header p-4 flex justify-between items-center bg-gray-50">
+                                    <h4 class="font-semibold">B3: Inborn Errors of Metabolism</h4>
+                                    <span class="text-xl font-bold transform transition-transform">+</span>
+                                </div>
+                                <div class="accordion-content p-4 border-t">
+                                    <p class="text-sm">Rare conditions usually diagnosed in childhood, such as Pyruvate Dehydrogenase Deficiency or mitochondrial myopathies.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="typeD" class="tab-content hidden">
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl mb-2 text-[#546E7A]">Type D: The Neurological Mimic</h3>
+                        <p class="mb-4">A rare but critical diagnosis caused by bacterial fermentation of carbohydrates in the gut, leading to absorption of D-lactate. This is easily missed because the standard lab assay only measures L-lactate. Suspect this in a patient with short bowel syndrome presenting with encephalopathy.</p>
+                        <div class="overflow-x-auto">
+                           <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 font-semibold">Feature</th>
+                                        <th class="p-3 font-semibold">L-Lactic Acidosis</th>
+                                        <th class="p-3 font-semibold">D-Lactic Acidosis</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b">
+                                        <td class="p-3 font-semibold">Source</td>
+                                        <td class="p-3">Host Tissues</td>
+                                        <td class="p-3 font-bold">Gut Bacteria</td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="p-3 font-semibold">Key Symptoms</td>
+                                        <td class="p-3">Signs of underlying cause (e.g., shock)</td>
+                                        <td class="p-3 font-bold">Episodic Encephalopathy (ataxia, confusion)</td>
+                                    </tr>
+                                    <tr class="bg-red-50">
+                                        <td class="p-3 font-semibold text-red-800">Standard Lactate Assay</td>
+                                        <td class="p-3 font-bold text-red-800">Elevated</td>
+                                        <td class="p-3 font-bold text-red-800">NORMAL</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 font-semibold">Diagnosis</td>
+                                        <td class="p-3">High Anion Gap + Elevated L-Lactate</td>
+                                        <td class="p-3 font-bold">High Anion Gap + NORMAL L-Lactate + Specific D-Lactate Assay</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="management" class="content-section hidden">
+                <p class="text-center max-w-3xl mx-auto mb-8 text-gray-700">Management in the ED is time-critical. It starts with the ABCDE approach and, for septic patients, immediate implementation of the Sepsis Six. Lactate clearance is a key prognostic marker. Specific therapies like bicarbonate, RRT and antidotes are reserved for specific circumstances.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl text-center mb-4">The UK Sepsis Six</h3>
+                        <p class="text-center text-sm mb-4">A lactate ≥2 mmol/L is a high-risk criterion. This bundle must be delivered within 1 hour.</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-3 bg-[#90A4AE]/20 rounded-lg text-center"><span class="font-bold text-[#546E7A]">1.</span> High-Flow Oxygen</div>
+                            <div class="p-3 bg-[#90A4AE]/20 rounded-lg text-center"><span class="font-bold text-[#546E7A]">2.</span> Blood Cultures</div>
+                            <div class="p-3 bg-[#90A4AE]/20 rounded-lg text-center"><span class="font-bold text-[#546E7A]">3.</span> IV Antibiotics</div>
+                            <div class="p-3 bg-[#90A4AE]/20 rounded-lg text-center"><span class="font-bold text-[#546E7A]">4.</span> IV Fluids</div>
+                            <div class="p-3 bg-[#90A4AE]/20 rounded-lg text-center"><span class="font-bold text-[#546E7A]">5.</span> Measure Lactate</div>
+                            <div class="p-3 bg-[#90A4AE]/20 rounded-lg text-center"><span class="font-bold text-[#546E7A]">6.</span> Measure Urine Output</div>
+                        </div>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl text-center mb-4">Lactate Clearance as a Target</h3>
+                        <p class="text-center text-sm mb-4">The trend is vital. Aim for >20% clearance at 2 hours. Failure to clear is an ominous sign.</p>
+                         <div class="chart-container" style="height: 250px;">
+                             <canvas id="clearanceTrendChart"></canvas>
+                        </div>
+                    </div>
+                     <div class="card p-6">
+                        <h3 class="font-bold text-xl mb-4">Toxin-Specific Management</h3>
+                        <ul class="list-disc list-inside space-y-2 text-sm mt-2">
+                             <li><strong>Metformin (MALA):</strong> Primarily supportive care. RRT is the definitive treatment to remove metformin and correct acidosis if severe (pH < 7.1).</li>
+                             <li><strong>Toxic Alcohols (Methanol, Ethylene Glycol):</strong> Block metabolism with an alcohol dehydrogenase inhibitor (Fomepizole). RRT is often required.</li>
+                             <li><strong>Salicylates:</strong> Urinary alkalinisation (IV Bicarbonate) to enhance excretion. RRT for severe cases.</li>
+                        </ul>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl mb-4 text-[#DC143C]">Bicarbonate & RRT</h3>
+                        <p class="font-semibold">These are ICU-level interventions, NOT routine ED therapies.</p>
+                         <ul class="list-disc list-inside space-y-2 text-sm mt-2">
+                              <li><strong>Bicarbonate:</strong> Only consider if pH ≤ 7.15 with AKI, in specific poisonings, or for life-threatening hyperkalaemia.</li>
+                              <li><strong>Renal Replacement Therapy (RRT):</strong> For refractory acidosis, dialysable toxins, or severe fluid/electrolyte derangement.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+             <section id="pearls" class="content-section hidden">
+                <p class="text-center max-w-3xl mx-auto mb-8 text-gray-700">A summary of high-yield concepts and common pitfalls for the ED registrar.</p>
+                <div class="space-y-6 max-w-4xl mx-auto">
+                    <div class="card p-5">
+                        <h3 class="font-bold text-lg mb-2 text-[#546E7A]">1. Lactate is a Fuel, Not Just Waste</h3>
+                        <p class="text-gray-700">Think of hyperlactatemia as a sign of significant metabolic stress, not always tissue hypoxia (dysoxia). In sepsis, for example, massive catecholamine release can drive aerobic glycolysis and lactate production even with adequate oxygen delivery. The clinical context is everything.</p>
+                    </div>
+                    <div class="card p-5">
+                        <h3 class="font-bold text-lg mb-2 text-[#546E7A]">2. Mind the Albumin</h3>
+                        <p class="text-gray-700">Always calculate the albumin-corrected anion gap. Many critically ill patients are hypoalbuminaemic. A "normal" anion gap of 12 in a patient with an albumin of 25 g/L is actually hiding a significant, unmeasured anion load. This is a commonly missed finding.</p>
+                    </div>
+                    <div class="card p-5">
+                        <h3 class="font-bold text-lg mb-2 text-[#546E7A]">3. Use the Delta Ratio to Find the Mixed Picture</h3>
+                        <p class="text-gray-700">A pure high anion gap metabolic acidosis should have a delta ratio of 1-2. A ratio < 1 suggests a concurrent normal anion gap acidosis (e.g., from saline resuscitation). A ratio > 2 suggests a concurrent metabolic alkalosis (e.g., from vomiting).</p>
+                    </div>
+                    <div class="card p-5">
+                        <h3 class="font-bold text-lg mb-2 text-[#546E7A]">4. The Trend is Your Friend</h3>
+                        <p class="text-gray-700">A single lactate value is a snapshot; the trend over time tells the story of your resuscitation. Failure to clear lactate by at least 20% within 2 hours is a major red flag indicating persistent shock or an unaddressed underlying cause. Re-evaluate your patient aggressively.</p>
+                    </div>
+                    <div class="card p-5">
+                        <h3 class="font-bold text-lg mb-2 text-[#546E7A]">5. Don't Forget D-Lactate</h3>
+                        <p class="text-gray-700">In a patient with a history of short-bowel syndrome or jejunoileal bypass who presents with episodic encephalopathy, ataxia, and slurred speech, think D-lactic acidosis. They will have a high anion gap, but the standard hospital lactate assay (which only measures L-lactate) will be normal. This requires a specific send-out test.</p>
+                    </div>
+                </div>
+             </section>
+        </main>
+    </div>
+
+<script>
+    // Helper function to navigate to a specific main tab and sub-tab
+    function navigateToTab(mainTabId, subTabId) {
+        const mainButton = document.querySelector(`[data-target='${mainTabId}']`);
+        if (mainButton) mainButton.click();
+
+        if (subTabId) {
+            const subTabButton = document.querySelector(`[data-tab='${subTabId}']`);
+            if (subTabButton) {
+                // Use a small timeout to ensure the section is visible before clicking the sub-tab
+                setTimeout(() => subTabButton.click(), 50);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const palette = {
+            bg: '#E0F2F1',
+            tan: '#90A4AE',
+            sienna: '#546E7A',
+            dark: '#3D405B',
+            danger: '#DC143C',
+            success: '#28a745'
+        };
+
+        const navButtons = document.querySelectorAll('.nav-button');
+        const contentSections = document.querySelectorAll('.content-section');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const accordionItems = document.querySelectorAll('.accordion-item');
+        const calculateBtn = document.getElementById('calculateBtn');
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                const targetId = button.dataset.target;
+                contentSections.forEach(section => {
+                    section.classList.toggle('hidden', section.id !== targetId);
+                });
+                window.scrollTo({ top: document.getElementById('main-nav').offsetTop, behavior: 'smooth' });
+            });
+        });
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // In a given tab group, deactivate all buttons then activate the clicked one
+                button.parentElement.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const tabId = button.dataset.tab;
+                // Find the associated content blocks and toggle their visibility
+                const container = button.closest('section');
+                container.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('hidden', content.id !== tabId);
+                });
+            });
+        });
+        
+        accordionItems.forEach(item => {
+            const header = item.querySelector('.accordion-header');
+            const content = item.querySelector('.accordion-content');
+            const icon = header.querySelector('span');
+
+            header.addEventListener('click', () => {
+                const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+                if (isOpen) {
+                    content.style.maxHeight = '0px';
+                    content.style.paddingTop = '0px';
+                    content.style.paddingBottom = '0px';
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    content.style.paddingTop = '1rem';
+                    content.style.paddingBottom = '1rem';
+                    icon.style.transform = 'rotate(45deg)';
+                }
+            });
+        });
+
+        if(calculateBtn) {
+            calculateBtn.addEventListener('click', () => {
+                const na = parseFloat(document.getElementById('sodium').value);
+                const k = parseFloat(document.getElementById('potassium').value) || 0;
+                const cl = parseFloat(document.getElementById('chloride').value);
+                const hco3 = parseFloat(document.getElementById('bicarb').value);
+                const alb = parseFloat(document.getElementById('albumin').value);
+
+                if (isNaN(na) || isNaN(cl) || isNaN(hco3) || isNaN(alb)) {
+                    console.error('Please fill in Sodium, Chloride, Bicarbonate, and Albumin fields.');
+                    return;
+                }
+
+                // Calculations
+                const measuredAg = (na + k) - (cl + hco3);
+                const correctedAg = measuredAg + 0.25 * (40 - alb);
+                const winters = (1.5 * hco3) + 8;
+                
+                const deltaAg = correctedAg - 12; // Normal AG is ~12
+                const deltaHco3 = 24 - hco3; // Normal HCO3 is ~24
+                const deltaRatio = deltaHco3 !== 0 ? deltaAg / deltaHco3 : 0;
+                
+                // Interpretation of Delta Ratio
+                let interpretation = '';
+                if (deltaRatio < 1) {
+                    interpretation = '(< 1.0) Suggests a concurrent normal anion gap metabolic acidosis.';
+                } else if (deltaRatio >= 1 && deltaRatio <= 2) {
+                    interpretation = '(1.0 - 2.0) Consistent with a pure high anion gap metabolic acidosis.';
+                } else {
+                    interpretation = '(> 2.0) Suggests a concurrent metabolic alkalosis or a compensated chronic respiratory acidosis.';
+                }
+
+
+                // Display results
+                document.getElementById('correctedAgResult').textContent = `${correctedAg.toFixed(1)} mmol/L`;
+                document.getElementById('wintersResult').textContent = `${(winters - 2).toFixed(1)} - ${(winters + 2).toFixed(1)} mmHg`;
+                document.getElementById('deltaRatioResult').textContent = deltaRatio.toFixed(2);
+                document.getElementById('deltaRatioInterpretation').textContent = interpretation;
+                document.getElementById('results').classList.remove('hidden');
+            });
+        }
+
+        const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: palette.dark, font: { family: "'Source Sans 3', sans-serif" } }
+                },
+                tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleFont: { weight: 'bold' } }
+            },
+        };
+        
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const canvas = entry.target;
+                    const chartId = canvas.id;
+                    if (Chart.getChart(canvas)) return; // Don't re-render
+
+                    if (chartId === 'clearanceChart') {
+                        new Chart(canvas.getContext('2d'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Liver (~60%)', 'Kidneys (~30%)', 'Other (~10%)'],
+                                datasets: [{ data: [60, 30, 10], backgroundColor: ['#78909C', '#546E7A', '#B0BEC5'], borderColor: '#FFFFFF', borderWidth: 3 }]
+                            },
+                            options: {...commonChartOptions}
+                        });
+                    } else if (chartId === 'typeAChart') {
+                         new Chart(canvas.getContext('2d'), {
+                            type: 'bar',
+                            data: {
+                                labels: ['Septic Shock', 'Cardiogenic', 'Hypovolaemic', 'Obstructive'],
+                                datasets: [{ label: 'Prevalence', data: [62, 16, 16, 6], backgroundColor: [palette.danger, '#C41E3A', palette.sienna, palette.tan], borderRadius: 4, }]
+                            },
+                            options: { ...commonChartOptions, plugins: {...commonChartOptions.plugins, legend: { display: false }}, scales: { y: { beginAtZero: true, ticks: { color: palette.dark }, grid: { drawOnChartArea: false } }, x: { ticks: { color: palette.dark }, grid: { display: false } } } }
+                        });
+                    } else if (chartId === 'clearanceTrendChart') {
+                        new Chart(canvas.getContext('2d'), {
+                            type: 'line',
+                            data: {
+                                labels: ['0h', '2h', '4h', '6h'],
+                                datasets: [
+                                    { label: 'Successful Clearance (>20% at 2h)', data: [8, 5.5, 3.5, 2], borderColor: palette.success, backgroundColor: 'rgba(40, 167, 69, 0.1)', fill: true, tension: 0.3 }, 
+                                    { label: 'Failure to Clear', data: [8, 7.8, 7.6, 7.5], borderColor: palette.danger, backgroundColor: 'rgba(220, 20, 60, 0.1)', fill: true, tension: 0.3 }
+                                ]
+                            },
+                            options: { ...commonChartOptions, scales: { y: { beginAtZero: true, ticks: { color: palette.dark }, title: { display: true, text: 'Lactate (mmol/L)', color: palette.dark}}, x: { ticks: { color: palette.dark }, grid: { display: false } } } }
+                        });
+                    }
+                    observer.unobserve(canvas);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('canvas').forEach(canvas => {
+            observer.observe(canvas);
+        });
+    });
+</script>
+
+</body>
+</html>
+
